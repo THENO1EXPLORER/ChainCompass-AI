@@ -21,7 +21,7 @@ if st.button("Find Best Route"):
     from_amount = int(from_amount_display * 10**6)
 
     # Define the API endpoint of your backend server
-    api_url = "http://127.0.0.1:8000/api/v1/quote"
+    api_url = "https://chaincompass-ai-krishnav.onrender.com/api/v1/quote"
 
     # The parameters for your API, taken from the input fields
     params = {
