@@ -1,6 +1,5 @@
 import streamlit as st
 import requests
-import pandas as pd
 
 # Set up the title and icon of the web page
 st.set_page_config(page_title="ChainCompass AI", page_icon="🧭")
@@ -13,15 +12,15 @@ from_chain = st.text_input("From Chain (e.g., POL)", "POL")
 to_chain = st.text_input("To Chain (e.g., ARB)", "ARB")
 from_token = st.text_input("From Token (e.g., USDC)", "USDC")
 to_token = st.text_input("To Token (e.g., ETH)", "ETH")
-from_amount_display = st.number_input("Amount to Swap (e.g., 100)", value=100)
+from_amount_display = st.number_input("Amount to Swap (e.g., 100)", value=100.0, min_value=0.0, step=1.0)
 
 # --- The button to trigger the API call ---
 if st.button("Find Best Route"):
     # Convert the user-friendly amount to the smallest unit for the API
-    # We'll assume 6 decimals for USDC as our primary example
+    # Assuming 6 decimals for USDC as our primary example
     from_amount = int(from_amount_display * 10**6)
 
-    # Define the API endpoint of YOUR backend server
+    # Define the API endpoint of your backend server
     api_url = "http://127.0.0.1:8000/api/v1/quote"
 
     # The parameters for your API, taken from the input fields
@@ -34,7 +33,7 @@ if st.button("Find Best Route"):
     }
 
     # --- Call your own API and display the result ---
-    with st.spinner("Searching for the best route... This may take a moment."):
+    with st.spinner("Asking the AI for the best route..."):
         try:
             # Make the request to your FastAPI backend
             response = requests.get(api_url, params=params)
@@ -42,20 +41,20 @@ if st.button("Find Best Route"):
             
             result = response.json()
 
-            st.subheader("🏆 Best Route Found!")
+            st.subheader("🏆 Your AI Recommendation")
 
+            # --- This is the updated part for the AI summary ---
             if "error" in result:
                 st.error(f"An error occurred: {result.get('details', 'Unknown error')}")
             else:
-                # Display the results in a clean table format
-                df = pd.DataFrame([result])
-                df_display = df[['provider', 'output_usd', 'time_seconds', 'fees_usd']].rename(columns={
-                    'provider': 'Provider',
-                    'output_usd': 'Est. Received (USD)',
-                    'time_seconds': 'Est. Time (Seconds)',
-                    'fees_usd': 'Total Fees (USD)'
-                })
-                st.dataframe(df_display, hide_index=True)
+                # Get the summary text from the new response format
+                ai_summary = result.get("summary", "No summary available.")
+                # Display the AI's sentence using markdown for better rendering
+                st.markdown(f"""
+                 <div style="padding: 1rem; border-radius: 0.5rem; background-color: #d4edda; border-left: 6px solid #28a745;">
+                 <p style="color: #155724; margin-bottom: 0;">{ai_summary}</p>
+                 </div>
+                """, unsafe_allow_html=True)
 
         except requests.exceptions.RequestException as e:
             st.error(f"Could not connect to the backend server. Make sure it's running. Error: {e}")
