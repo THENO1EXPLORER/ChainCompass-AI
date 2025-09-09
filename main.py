@@ -1,3 +1,4 @@
+import os
 import requests
 import json
 from fastapi import FastAPI
@@ -5,15 +6,16 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
 
-# Load environment variables (for OpenAI API key)
+# Load environment variables (for OpenAI and LI.FI API keys)
 load_dotenv()
 
 # Create an instance of the FastAPI class
 app = FastAPI(title="ChainCompass API")
 
-# --- (Your parse_quote function stays here, unchanged) ---
 def parse_quote(quote_data):
-    # ... (same as before)
+    """
+    This function takes the full JSON response and extracts the important details.
+    """
     estimate = quote_data.get("estimate", {})
     tool_details = quote_data.get("toolDetails", {})
     provider_name = tool_details.get("name", "N/A")
@@ -30,7 +32,7 @@ def parse_quote(quote_data):
     }
     return summary
 
-# --- Initialize LangChain components ---
+# Initialize LangChain components
 llm = ChatOpenAI(model="gpt-4o-mini")
 prompt = ChatPromptTemplate.from_template(
     "You are a helpful crypto assistant called ChainCompass. "
@@ -47,25 +49,40 @@ def read_root():
 
 @app.get("/api/v1/quote")
 def get_lifi_quote(fromChain: str, toChain: str, fromToken: str, toToken: str, fromAmount: str):
-    params = { "fromChain": fromChain, "toChain": toChain, "fromToken": fromToken, "toToken": toToken, "fromAmount": fromAmount, "fromAddress": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" }
+    params = {
+        "fromChain": fromChain,
+        "toChain": toChain,
+        "fromToken": fromToken,
+        "toToken": toToken,
+        "fromAmount": fromAmount,
+        "fromAddress": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    }
     api_url = "https://li.quest/v1/quote"
+    
+    # Get the LI.FI API key from environment variables
+    lifi_api_key = os.getenv("LIFI_API_KEY")
+
+    # Create headers to send with the request, including our key
+    headers = {
+        "accept": "application/json",
+        "x-lifi-api-key": lifi_api_key
+    }
 
     try:
-        response = requests.get(api_url, params=params)
+        # Add the headers to the request call
+        response = requests.get(api_url, params=params, headers=headers)
         response.raise_for_status()
-
-        # 1. Get raw data
+        
         raw_quote_data = response.json()
-
-        # 2. Parse into clean summary
         clean_summary = parse_quote(raw_quote_data)
-
-        # 3. NEW: Generate AI summary
+        
+        # Generate AI summary
         ai_response = chain.invoke(clean_summary)
         ai_summary = ai_response.content
-
-        # 4. Return the AI's sentence
+        
         return {"summary": ai_summary}
-
+        
+    except requests.exceptions.HTTPError as err:
+        return {"error": "Failed to fetch quote from LI.FI", "details": err.response.text}
     except Exception as err:
-        return {"error": "An error occurred", "details": str(err)}
+        return {"error": "An unexpected error occurred", "details": str(err)}
