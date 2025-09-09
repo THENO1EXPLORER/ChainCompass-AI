@@ -23,7 +23,8 @@ def parse_quote(quote_data):
     final_output_usd = estimate.get("toAmountUSD", "0")
     total_fees_usd = 0
     for fee in estimate.get("feeCosts", []):
-        total_fees_usd += float(fee.get("amountUSD", 0))
+        # Corrected line
+       total_fees_usd += float(fee.get("amountUSD", "0"))
     summary = {
         "provider": provider_name,
         "time_seconds": execution_time_seconds,
