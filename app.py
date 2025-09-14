@@ -39,33 +39,8 @@ def apply_custom_styling():
     }
     
     /* Hide the default radio buttons */
-    [data-testid="stRadio"] {
-        display: none;
-    }
+    [data-testid="stRadio"] { display: none; }
 
-    /* Style custom buttons for navigation */
-    .nav-btn {
-        width: 100%;
-        background-color: transparent;
-        color: #FFFFFF;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        transition: all 0.2s ease-in-out;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-        text-align: left;
-        padding: 0.75rem;
-    }
-    .nav-btn:hover {
-        background-color: rgba(167, 112, 239, 0.2);
-        color: #CF8BF3;
-        border-color: #A770EF;
-    }
-    .nav-btn.active {
-        background-color: #A770EF;
-        color: white;
-        border-color: #A770EF;
-    }
-    
     /* --- General UI Elements --- */
     h1 {
         font-weight: 700;
@@ -74,6 +49,14 @@ def apply_custom_styling():
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         animation: textShine 5s linear infinite, fadeIn 0.8s ease;
+        display: flex;
+        align-items: center;
+    }
+    h1 svg {
+        width: 40px;
+        height: 40px;
+        margin-right: 15px;
+        fill: #CF8BF3;
     }
     @keyframes textShine { to { background-position: 200% center; } }
 
@@ -113,10 +96,7 @@ def apply_custom_styling():
         margin: 5px;
         transition: transform 0.2s ease;
     }
-    .tech-badges img:hover {
-        transform: scale(1.1);
-    }
-    
+    .tech-badges img:hover { transform: scale(1.1); }
     """
     st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
     
@@ -138,7 +118,12 @@ def generate_token_pie_chart():
 
 # --- Page Rendering Functions ---
 def render_dashboard():
-    st.title("📈 Analytics Dashboard")
+    st.markdown("""
+    <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><path d="M3 13H5V11H3V13ZM3 17H5V15H3V17ZM3 9H5V7H3V9ZM7 13H17V11H7V13ZM7 17H17V15H7V17ZM7 9H17V7H7V9ZM19 13H21V11H19V13ZM19 17H21V15H19V17ZM19 9H21V7H19V9ZM3 21H5V19H3V21ZM7 21H17V19H7V21ZM19 21H21V19H19V21ZM3 5H5V3H3V5ZM7 5H17V3H7V5ZM19 5H21V3H19V5Z"></path></svg>
+        Analytics Dashboard
+    </h1>
+    """, unsafe_allow_html=True)
     st.markdown("Welcome to the ChainCompass AI Suite. Here's a real-time overview of cross-chain activity.")
     st.markdown("### Key Metrics", help="These are simulated metrics for demonstration purposes.")
     m1, m2, m3, m4 = st.columns(4)
@@ -160,7 +145,12 @@ def render_dashboard():
         st.markdown('</div>', unsafe_allow_html=True)
 
 def render_swap_ai():
-    st.title("🤖 Swap AI Assistant")
+    st.markdown("""
+    <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><path d="M19.964 12.032c.024.314.036.63.036.952 0 4.41-3.586 8.016-8 8.016-4.41 0-8-3.605-8-8.016 0-3.352 2.06-6.234 5-7.44V2.558C4.582 3.96 1.964 7.64 1.964 12c0 5.514 4.486 10.016 10 10.016s10-4.502 10-10.016c0-.31-.013-.617-.036-.92L19.964 12.032zM12 0C9.794 0 8 1.79 8 4s1.794 4 4 4 4-1.79 4-4-1.794-4-4-4zm0 6c-1.103 0-2-.897-2-2s.897-2 2-2 2 .897 2 2-.897 2-2 2zm-4 4.016c-3.309 0-6 2.691-6 6v1.984h12v-1.984c0-3.309-2.691-6-6-6zm0 2c2.206 0 4 1.794 4 4v.016H4v-.016c0-2.206 1.794-4 4-4z"></path></svg>
+        Swap AI Assistant
+    </h1>
+    """, unsafe_allow_html=True)
     st.caption("Your smart guide for finding the best cross-chain swap routes.")
     with st.container():
         st.markdown('<div class="content-card">', unsafe_allow_html=True)
@@ -206,14 +196,18 @@ def render_swap_ai():
             ''', unsafe_allow_html=True)
 
 def render_about_page():
-    st.title("📖 About ChainCompass AI")
+    st.markdown("""
+    <h1>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="40" height="40"><path d="M12 2C6.486 2 2 6.486 2 12s4.486 10 10 10 10-4.486 10-10S17.514 2 12 2zm0 18c-4.411 0-8-3.589-8-8s3.589-8 8-8 8 3.589 8 8-3.589 8-8 8zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"></path></svg>
+        About ChainCompass AI
+    </h1>
+    """, unsafe_allow_html=True)
     st.markdown('<div class="content-card">', unsafe_allow_html=True)
     st.image("logo.png", width=100)
     st.subheader("Mission")
     st.write("ChainCompass AI solves the problem of complexity in Decentralized Finance (DeFi)...")
     st.subheader("Technology Stack")
     
-    # NEW: Professional Tech Stack Badges
     st.markdown("""
         <div class="tech-badges">
             <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
@@ -242,14 +236,29 @@ def main():
 
         # This logic creates custom buttons and manages the active state
         for page, icon in pages.items():
-            # Create a unique key for each button
             button_key = f"nav_button_{page}"
-            # Check if the current page is the active page to apply the 'active' class
             is_active = (st.session_state.active_page == page)
-            # Use st.markdown to create a custom HTML button
+            # Use st.markdown for a custom button, and st.button for the action
+            # This is a workaround to apply custom classes
+            st.markdown(f'<div class="nav-btn-wrapper">', unsafe_allow_html=True)
             if st.button(f"{icon} {page}", key=button_key, use_container_width=True):
                 st.session_state.active_page = page
                 st.rerun()
+            st.markdown(f'</div>', unsafe_allow_html=True)
+            
+            # This is a javascript hack to add the 'active' class
+            if is_active:
+                components.html(f"""
+                <script>
+                    var buttons = parent.document.querySelectorAll('button');
+                    buttons.forEach(function(button) {{
+                        if (button.innerText.includes("{page}")) {{
+                            button.classList.add('active');
+                        }}
+                    }});
+                </script>
+                """, height=0)
+
 
     page_functions = {"Dashboard": render_dashboard, "Swap AI": render_swap_ai, "About": render_about_page}
     page_functions[st.session_state.active_page]()
