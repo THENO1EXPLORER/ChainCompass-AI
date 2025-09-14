@@ -15,7 +15,7 @@ st.set_page_config(
 
 # --- Asset & Style Management ---
 def apply_custom_styling():
-    """Injects all custom CSS and JavaScript for the application."""
+    """Injects all custom CSS for the entire multi-page application."""
     custom_css = """
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
@@ -37,16 +37,32 @@ def apply_custom_styling():
         backdrop-filter: blur(15px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
-    [data-testid="stSidebar"] .stButton button {
+    
+    /* Hide the default radio buttons */
+    [data-testid="stRadio"] {
+        display: none;
+    }
+
+    /* Style custom buttons for navigation */
+    .nav-btn {
+        width: 100%;
         background-color: transparent;
         color: #FFFFFF;
         border: 1px solid rgba(255, 255, 255, 0.2);
         transition: all 0.2s ease-in-out;
         font-weight: 600;
+        margin-bottom: 0.5rem;
+        text-align: left;
+        padding: 0.75rem;
     }
-    [data-testid="stSidebar"] .stButton button:hover {
+    .nav-btn:hover {
         background-color: rgba(167, 112, 239, 0.2);
         color: #CF8BF3;
+        border-color: #A770EF;
+    }
+    .nav-btn.active {
+        background-color: #A770EF;
+        color: white;
         border-color: #A770EF;
     }
     
@@ -66,7 +82,6 @@ def apply_custom_styling():
     [data-testid="stNumberInput"] div[data-baseweb="input"] > div {
         background-color: rgba(0, 0, 0, 0.3);
         border: 1px solid rgba(255, 255, 255, 0.2);
-        color: white;
     }
     
     /* --- Main Action Button --- */
@@ -92,6 +107,15 @@ def apply_custom_styling():
         animation: fadeIn 0.8s ease;
     }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* --- Tech Stack Badges --- */
+    .tech-badges img {
+        margin: 5px;
+        transition: transform 0.2s ease;
+    }
+    .tech-badges img:hover {
+        transform: scale(1.1);
+    }
     
     """
     st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
@@ -188,7 +212,20 @@ def render_about_page():
     st.subheader("Mission")
     st.write("ChainCompass AI solves the problem of complexity in Decentralized Finance (DeFi)...")
     st.subheader("Technology Stack")
-    st.markdown("- **Frontend:** Streamlit\n- **Backend:** FastAPI\n- **AI:** LangChain, OpenAI")
+    
+    # NEW: Professional Tech Stack Badges
+    st.markdown("""
+        <div class="tech-badges">
+            <img src="https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="Python">
+            <img src="https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white" alt="Streamlit">
+            <img src="https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white" alt="FastAPI">
+            <img src="https://img.shields.io/badge/LangChain-182333?style=for-the-badge&logo=langchain&logoColor=white" alt="LangChain">
+            <img src="https://img.shields.io/badge/OpenAI-412991?style=for-the-badge&logo=openai&logoColor=white" alt="OpenAI">
+            <img src="https://img.shields.io/badge/Render-46E3B7?style=for-the-badge&logo=render&logoColor=white" alt="Render">
+            <img src="https://img.shields.io/badge/Plotly-3F4F75?style=for-the-badge&logo=plotly&logoColor=white" alt="Plotly">
+        </div>
+    """, unsafe_allow_html=True)
+    
     st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Main App Router ---
@@ -198,17 +235,21 @@ def main():
     with st.sidebar:
         st.image("logo.png", use_container_width=True)
         st.header("Navigation")
-        pages = ["Dashboard", "Swap AI", "About"]
+        pages = {"Dashboard": "📈", "Swap AI": "🤖", "About": "📖"}
+        
         if 'active_page' not in st.session_state:
             st.session_state.active_page = "Dashboard"
 
-        # Use a hidden radio button to control state and styled buttons for UI
-        # This is a robust method for single-page app navigation
-        active_page = st.radio("Main navigation", pages, key="nav_radio", label_visibility="collapsed")
-        
-        if active_page != st.session_state.active_page:
-             st.session_state.active_page = active_page
-             st.rerun()
+        # This logic creates custom buttons and manages the active state
+        for page, icon in pages.items():
+            # Create a unique key for each button
+            button_key = f"nav_button_{page}"
+            # Check if the current page is the active page to apply the 'active' class
+            is_active = (st.session_state.active_page == page)
+            # Use st.markdown to create a custom HTML button
+            if st.button(f"{icon} {page}", key=button_key, use_container_width=True):
+                st.session_state.active_page = page
+                st.rerun()
 
     page_functions = {"Dashboard": render_dashboard, "Swap AI": render_swap_ai, "About": render_about_page}
     page_functions[st.session_state.active_page]()
