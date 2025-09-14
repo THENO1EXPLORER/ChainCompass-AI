@@ -221,7 +221,7 @@ def main():
         st.header("Navigation")
         
         # This is a robust, single-file compatible navigation method
-        pages = ["Dashboard", " CHAINCOMPASS-AI", "About"]
+        pages = ["Dashboard", "Swap AI", "About"]
         icons = ["📊", "🤖", "📖"]
         
         if 'active_page' not in st.session_state:
