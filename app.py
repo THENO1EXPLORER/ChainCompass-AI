@@ -75,24 +75,53 @@ def apply_custom_styling():
     
     /* --- Animations --- */
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
-    /* Hide the default radio button circles */
-    div[role="radiogroup"] > label {
-        display: none;
-    }
     
     """
     st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
 
+# --- Caching Data Generation Functions ---
+@st.cache_data
+def generate_volume_chart():
+    """Generates and returns the volume bar chart. Will be cached after first run."""
+    df_chains = pd.DataFrame({
+        'Chain': ['Polygon', 'Arbitrum', 'Optimism', 'Base', 'Ethereum'],
+        'Volume (Millions)': [450, 320, 210, 150, 90]
+    })
+    fig = go.Figure(data=[go.Bar(
+        x=df_chains['Chain'], y=df_chains['Volume (Millions)'],
+        marker_color=['#A770EF', '#CF8BF3', '#FDB99B', '#A770EF', '#CF8BF3']
+    )])
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white", margin=dict(l=20, r=20, t=40, b=20)
+    )
+    return fig
+
+@st.cache_data
+def generate_token_pie_chart():
+    """Generates and returns the token pie chart. Will be cached after first run."""
+    df_tokens = pd.DataFrame({
+        'Token': ['USDC', 'ETH', 'USDT', 'WBTC', 'Other'],
+        'Percentage': [55, 25, 12, 5, 3]
+    })
+    fig = go.Figure(data=[go.Pie(
+        labels=df_tokens['Token'], values=df_tokens['Percentage'], hole=.4,
+        marker_colors=['#A770EF', '#CF8BF3', '#FDB99B', '#8A2BE2', '#4B0082']
+    )])
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+        font_color="white", legend_orientation="h", margin=dict(l=20, r=20, t=40, b=20)
+    )
+    return fig
 
 # --- Dashboard Page ---
 def render_dashboard():
     st.title("📈 Analytics Dashboard")
     st.markdown("Welcome to the ChainCompass AI Suite. Here's a real-time overview of cross-chain activity.")
 
-    # --- Metrics Row ---
     st.markdown("### Key Metrics", help="These are simulated metrics for demonstration purposes.")
     m1, m2, m3, m4 = st.columns(4)
+    # ... (Metrics cards are unchanged)
     with m1:
         st.markdown('<div class="metric-card"><h4>Total Value Swapped</h4><h2>$1.2B</h2><p style="color: #4CAF50;">+2.5% last 24h</p></div>', unsafe_allow_html=True)
     with m2:
@@ -102,48 +131,27 @@ def render_dashboard():
     with m4:
         st.markdown('<div class="metric-card"><h4>Supported Chains</h4><h2>12</h2><p>+2 new integrations</p></div>', unsafe_allow_html=True)
 
+
     st.markdown("---")
 
-    # --- Charts Row ---
     c1, c2 = st.columns(2)
     with c1:
         st.markdown('<div class="chart-card">', unsafe_allow_html=True)
         st.subheader("Swap Volume by Chain")
-        df_chains = pd.DataFrame({
-            'Chain': ['Polygon', 'Arbitrum', 'Optimism', 'Base', 'Ethereum'],
-            'Volume': [450, 320, 210, 150, 90]
-        })
-        fig = go.Figure(data=[go.Bar(
-            x=df_chains['Chain'], y=df_chains['Volume'],
-            marker_color=['#A770EF', '#CF8BF3', '#FDB99B', '#A770EF', '#CF8BF3']
-        )])
-        fig.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            font_color="white", margin=dict(l=20, r=20, t=40, b=20)
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        # Call the cached function
+        st.plotly_chart(generate_volume_chart(), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
     with c2:
         st.markdown('<div class="chart-card">', unsafe_allow_html=True)
         st.subheader("Popular Token Swaps")
-        df_tokens = pd.DataFrame({
-            'Token': ['USDC', 'ETH', 'USDT', 'WBTC', 'Other'],
-            'Percentage': [55, 25, 12, 5, 3]
-        })
-        fig2 = go.Figure(data=[go.Pie(
-            labels=df_tokens['Token'], values=df_tokens['Percentage'], hole=.4,
-            marker_colors=['#A770EF', '#CF8BF3', '#FDB99B', '#8A2BE2', '#4B0082']
-        )])
-        fig2.update_layout(
-            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
-            font_color="white", legend_orientation="h", margin=dict(l=20, r=20, t=40, b=20)
-        )
-        st.plotly_chart(fig2, use_container_width=True)
+        # Call the cached function
+        st.plotly_chart(generate_token_pie_chart(), use_container_width=True)
         st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Swap AI Page ---
 def render_swap_ai():
+    # ... (This entire function is unchanged)
     st.title("🤖 Swap AI Assistant")
     st.caption("Your smart guide for finding the best cross-chain swap routes.")
 
@@ -192,8 +200,10 @@ def render_swap_ai():
             </div>
             ''', unsafe_allow_html=True)
 
+
 # --- About Page ---
 def render_about_page():
+    # ... (This entire function is unchanged)
     st.title("📖 About ChainCompass AI")
     st.markdown('<div class="content-card">', unsafe_allow_html=True)
     st.image("logo.png", width=100)
@@ -211,6 +221,7 @@ def render_about_page():
     """)
     st.markdown('</div>', unsafe_allow_html=True)
 
+
 # --- Main App Router ---
 def main():
     apply_custom_styling()
@@ -220,14 +231,12 @@ def main():
         st.image("logo.png", use_container_width=True)
         st.header("Navigation")
         
-        # This is a robust, single-file compatible navigation method
         pages = ["Dashboard", "Swap AI", "About"]
         icons = ["📊", "🤖", "📖"]
         
         if 'active_page' not in st.session_state:
             st.session_state.active_page = "Dashboard"
 
-        # Use st.radio for state control and st.button for UI
         for page, icon in zip(pages, icons):
             if st.button(f"{icon} {page}", use_container_width=True):
                 st.session_state.active_page = page
