@@ -41,21 +41,7 @@ def apply_custom_styling():
     .st-emotion-cache-16txtl3 {
         padding: 2rem 1rem;
     }
-    .st-emotion-cache-j7qwjs { /* Sidebar Nav Links */
-        padding: 0.75rem;
-        border-radius: 0.5rem;
-        transition: all 0.2s ease-in-out;
-        font-weight: 600;
-    }
-    .st-emotion-cache-j7qwjs:hover {
-        background-color: rgba(167, 112, 239, 0.2);
-        color: #CF8BF3;
-    }
-    .st-emotion-cache-j7qwjs.st-emotion-cache-j7qwjs.st-emotion-cache-18l0hbk { /* Active Nav Link */
-        background-color: #A770EF;
-        color: white;
-    }
-
+    
     /* --- General UI Elements --- */
     h1, h2, h3, h4, h5, h6 {
         color: #FFFFFF;
@@ -80,6 +66,7 @@ def apply_custom_styling():
         backdrop-filter: blur(20px);
         transition: all 0.3s ease;
         animation: fadeIn 0.5s ease;
+        height: 100%; /* Ensure cards in a row have same height */
     }
     .metric-card:hover {
         transform: translateY(-5px);
@@ -89,6 +76,11 @@ def apply_custom_styling():
     /* --- Animations --- */
     @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
+    /* Hide the default radio button circles */
+    div[role="radiogroup"] > label {
+        display: none;
+    }
+    
     """
     st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
 
@@ -117,7 +109,6 @@ def render_dashboard():
     with c1:
         st.markdown('<div class="chart-card">', unsafe_allow_html=True)
         st.subheader("Swap Volume by Chain")
-        # Create a sample DataFrame for Plotly
         df_chains = pd.DataFrame({
             'Chain': ['Polygon', 'Arbitrum', 'Optimism', 'Base', 'Ethereum'],
             'Volume': [450, 320, 210, 150, 90]
@@ -156,7 +147,6 @@ def render_swap_ai():
     st.title("🤖 Swap AI Assistant")
     st.caption("Your smart guide for finding the best cross-chain swap routes.")
 
-    # Use a container to apply the card style
     with st.container():
         st.markdown('<div class="content-card">', unsafe_allow_html=True)
         st.subheader("⚙️ Enter Swap Details")
@@ -191,7 +181,6 @@ def render_swap_ai():
                     st.session_state.result = {"error": "An error occurred", "details": str(e)}
         st.markdown('</div>', unsafe_allow_html=True)
 
-    # Display Result
     if 'result' in st.session_state and st.session_state.result:
         if "error" in st.session_state.result:
             st.error(f"Error: {st.session_state.result.get('details', 'Unknown error')}")
@@ -231,41 +220,20 @@ def main():
         st.image("logo.png", use_container_width=True)
         st.header("Navigation")
         
-        # Using st.page_link for modern navigation (requires Streamlit 1.34+)
-        # Fallback to radio buttons if page_link is not available
-        try:
-            st.page_link(page="app.py", label="Dashboard", icon="📊")
-            st.page_link(page="app.py", label="Swap AI", icon="🤖")
-            st.page_link(page="app.py", label="About", icon="📖")
-            
-            # This is a bit of a hack to determine the active page with page_link
-            # A more robust solution might use query params
-            if 'active_page' not in st.session_state:
-                st.session_state.active_page = "Dashboard"
+        # This is a robust, single-file compatible navigation method
+        pages = ["Dashboard", "Swap AI", "About"]
+        icons = ["📊", "🤖", "📖"]
+        
+        if 'active_page' not in st.session_state:
+            st.session_state.active_page = "Dashboard"
 
-            # The UI won't show selection, but we can manage state
-            # This is a limitation of this simple routing method
-            
-        except AttributeError: # Fallback for older Streamlit versions
-             st.session_state.active_page = st.radio(
-                 "Go to", 
-                 ["Dashboard", "Swap AI", "About"], 
-                 label_visibility="collapsed"
-             )
+        # Use st.radio for state control and st.button for UI
+        for page, icon in zip(pages, icons):
+            if st.button(f"{icon} {page}", use_container_width=True):
+                st.session_state.active_page = page
+                st.rerun()
 
-
-    # This is a simple router. A real large-scale app might use a more complex system.
-    # We will simulate page navigation by checking the radio button state.
-    # NOTE: This simple router re-runs the whole script on page change.
-    
-    # Simple query param based router for page_link to work
-    query_params = st.query_params
-    if "page" in query_params:
-        st.session_state.active_page = query_params["page"]
-    else:
-        # Default to dashboard if no page is specified
-        st.session_state.active_page = "Dashboard"
-
+    # --- Page Rendering based on State ---
     if st.session_state.active_page == "Dashboard":
         render_dashboard()
     elif st.session_state.active_page == "Swap AI":
@@ -273,11 +241,8 @@ def main():
     elif st.session_state.active_page == "About":
         render_about_page()
     else:
-        render_dashboard() # Default page
+        render_dashboard() # Default to dashboard if state is invalid
 
 if __name__ == "__main__":
-    # Note: Streamlit's native multi-page app feature works by placing files
-    # in a `pages/` directory. Since we must use a single file, we are
-    # building a custom "router" here to simulate the experience.
     main()
 
