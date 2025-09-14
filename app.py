@@ -66,6 +66,7 @@ if st.button("Find Best Route"):
 
 # --- About section, placed at the end to be always visible ---
 with st.expander("ℹ️ About This App & How It Works"):
+    st.sidebar.image("logo.png", use_column_width=True)
     st.write("""
     This app is a full-stack AI application built to simplify cross-chain swaps.
     - The **frontend** you're using is built with **Streamlit**.
