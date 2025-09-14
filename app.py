@@ -2,246 +2,282 @@ import streamlit as st
 import requests
 import time
 import streamlit.components.v1 as components
-import base64
+import plotly.graph_objects as go
+import pandas as pd
 
-# --- Page Configuration ---
+# --- Page Configuration (MUST be the first Streamlit command) ---
 st.set_page_config(
-    page_title="ChainCompass AI",
+    page_title="ChainCompass AI Suite",
     page_icon="🧭",
-    layout="wide",  # Use wide layout for the 3D globe
-    initial_sidebar_state="auto"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 # --- Asset & Style Management ---
-def local_css(file_name):
-    with open(file_name, "w") as f:
-        f.write("""
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
+def apply_custom_styling():
+    """Injects all custom CSS for the entire multi-page application."""
+    custom_css = """
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
 
-        /* --- General Body & Font --- */
-        body { font-family: 'Poppins', sans-serif; overflow: hidden; }
-
-        /* --- 3D Globe Background Container --- */
-        #globe-container {
-            position: fixed;
-            width: 100vw;
-            height: 100vh;
-            top: 0;
-            left: 0;
-            z-index: -2;
-        }
-
-        /* --- Aurora Mouse Effect --- */
-        #cursor-aurora {
-            position: fixed;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, rgba(167, 112, 239, 0.3) 0%, rgba(167, 112, 239, 0) 60%);
-            border-radius: 50%;
-            pointer-events: none;
-            transform: translate(-50%, -50%);
-            transition: all 0.2s ease-out;
-            z-index: -1;
-        }
-
-        /* --- Main App Container --- */
-        .main .block-container {
-            max-width: 700px;
-            margin: 0 auto;
-            padding-top: 5rem;
-            z-index: 1;
-        }
-        
-        /* --- Holographic Card UI --- */
-        .card {
-            background: rgba(10, 5, 30, 0.75);
-            border-radius: 1.5rem;
-            padding: 2.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            margin-bottom: 2rem;
-            backdrop-filter: blur(20px);
-            transform-style: preserve-3d;
-            transform: perspective(1000px);
-            transition: transform 0.1s ease;
-        }
-
-        /* --- Animated Gradient Title --- */
-        h1 {
-            font-weight: 700;
-            letter-spacing: -2px;
-            background: linear-gradient(90deg, #CF8BF3, #A770EF, #FDB99B, #CF8BF3);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            animation: textShine 5s linear infinite;
-        }
-        @keyframes textShine { to { background-position: 200% center; } }
-        
-        /* --- Result Card --- */
-        .result-card {
-            border-left: 5px solid #A770EF;
-            animation: slideInUp 0.6s ease-out;
-        }
-        @keyframes slideInUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-
-        /* --- Animated Route Visualization --- */
-        .route-viz { display: flex; align-items: center; justify-content: space-between; padding: 1rem 0; color: white; }
-        .route-viz .chain { text-align: center; font-weight: 600; }
-        .route-viz .line {
-            flex-grow: 1; height: 2px;
-            background: linear-gradient(90deg, #A770EF, #CF8BF3);
-            transform: scaleX(0); transform-origin: left;
-            animation: drawLine 0.5s ease-out forwards;
-            animation-delay: 0.3s;
-            margin: 0 1rem;
-        }
-        @keyframes drawLine { to { transform: scaleX(1); } }
-        """)
-    with open(file_name) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-def local_js(file_name):
-    with open(file_name, "w") as f:
-        f.write("""
-        const aurora = document.getElementById('cursor-aurora');
-        const card = document.querySelector('.card');
-
-        document.addEventListener('mousemove', (e) => {
-            if (aurora) {
-                aurora.style.left = e.clientX + 'px';
-                aurora.style.top = e.clientY + 'px';
-            }
-            if(card) {
-                const rect = card.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
-                const rotateX = (y - rect.height / 2) / 20;
-                const rotateY = -(x - rect.width / 2) / 20;
-                card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale3d(1.02, 1.02, 1.02)`;
-            }
-        });
-
-        if(card) {
-            card.addEventListener('mouseleave', () => {
-                card.style.transform = 'perspective(1000px) rotateX(0) rotateY(0) scale3d(1, 1, 1)';
-            });
-        }
-        """)
-    with open(file_name) as f:
-        components.html(f'<script>{f.read()}</script>', height=0)
-
-# --- Inject Assets into Streamlit ---
-local_css("styles.css")
-components.html('<div id="globe-container"></div><div id="cursor-aurora"></div>', height=0)
-
-# Inject 3D Globe library and initialization script
-components.html("""
-    <script src="//unpkg.com/three"></script>
-    <script src="//unpkg.com/three-globe"></script>
-    <script>
-        const globe = Globe()
-            .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
-            .bumpImageUrl('//unpkg.com/three-globe/example/img/earth-topology.png')
-            .backgroundColor('rgba(0,0,0,0)')
-            .arcsData([...Array(20).keys()].map(() => ({
-                startLat: (Math.random() - 0.5) * 180,
-                startLng: (Math.random() - 0.5) * 360,
-                endLat: (Math.random() - 0.5) * 180,
-                endLng: (Math.random() - 0.5) * 360,
-                color: [['#CF8BF3', '#A770EF', '#FDB99B'][Math.round(Math.random() * 2)], ['#CF8BF3', '#A770EF', '#FDB99B'][Math.round(Math.random() * 2)]]
-            })))
-            .arcColor('color')
-            .arcDashLength(() => Math.random())
-            .arcDashGap(() => Math.random())
-            .arcDashAnimateTime(() => Math.random() * 4000 + 500)
-            .arcStroke(0.3)
-            (document.getElementById('globe-container'));
-
-        globe.controls().autoRotate = true;
-        globe.controls().autoRotateSpeed = 0.2;
-        globe.controls().enableZoom = false;
-    </script>
-""", height=0, scrolling=False)
-
-# --- App State Management ---
-if 'result' not in st.session_state:
-    st.session_state.result = None
-
-# --- UI Sidebar ---
-with st.sidebar:
-    st.image("logo.png", use_container_width=True)
-    st.info("Demo for the DoraHacks 'DeFiTimez Multichain Mayhem' Hackathon.")
-    with st.expander("💡 How It Works", expanded=True):
-        st.markdown("""
-        1.  **Enter Swap Details** in the interactive holographic card.
-        2.  **Backend on Render** calls the LI.FI API for the optimal route.
-        3.  **An AI (GPT-4o mini)** analyzes the complex data.
-        4.  **Receive a Visual Summary** below, complete with an animated diagram.
-        """)
-
-# --- Main Page Content ---
-st.title("🧭 ChainCompass AI")
-st.caption("Your smart guide for finding the best cross-chain swap routes.")
-
-# Input Card
-with st.container():
-    st.markdown('<div class="card">', unsafe_allow_html=True)
-    st.subheader("⚙️ Enter Swap Details")
-    CHAINS = {"Polygon": "POL", "Arbitrum": "ARB", "Ethereum": "ETH", "Optimism": "OPT", "Base": "BASE"}
-    TOKENS = {"USDC": "USDC", "Ethereum": "ETH", "Tether": "USDT", "Wrapped BTC": "WBTC"}
+    /* --- Universal Styles --- */
+    body {
+        font-family: 'Poppins', sans-serif;
+        background-color: #020418; /* Set a base background color */
+    }
     
-    col1, col2 = st.columns(2)
-    with col1:
-        from_chain_name = st.selectbox("From Chain", options=list(CHAINS.keys()), key="from_chain")
-        from_token_name = st.selectbox("Token to Swap", options=list(TOKENS.keys()), key="from_token")
-    with col2:
-        to_chain_name = st.selectbox("To Chain", options=list(CHAINS.keys()), index=1, key="to_chain")
-        to_token_name = st.selectbox("Token to Receive", options=list(TOKENS.keys()), index=1, key="to_token")
+    /* --- Main App Background & Container --- */
+    #root > div:nth-child(1) > div > div > div > div {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cg %3E%3Cpolygon fill='%23050928' points='1600 160 0 460 0 350 1600 50'%3E%3C/polygon%3E%3Cpolygon fill='%23080e38' points='1600 260 0 560 0 450 1600 150'%3E%3C/polygon%3E%3Cpolygon fill='%230b1348' points='1600 360 0 660 0 550 1600 250'%3E%3C/polygon%3E%3Cpolygon fill='%230e1858' points='1600 460 0 760 0 650 1600 350'%3E%3C/polygon%3E%3Cpolygon fill='%23111D68' points='1600 800 0 800 0 750 1600 450'%3E%3C/polygon%3E%3C/g%3E%3C/svg%3E");
+        background-attachment: fixed;
+        background-size: cover;
+    }
 
-    from_amount_display = st.number_input(f"Amount of {from_token_name} to Swap", value=100.0, min_value=0.01, step=10.0)
+    /* --- Sidebar Navigation --- */
+    [data-testid="stSidebar"] {
+        background-color: rgba(10, 5, 30, 0.85);
+        backdrop-filter: blur(15px);
+        border-right: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .st-emotion-cache-16txtl3 {
+        padding: 2rem 1rem;
+    }
+    .st-emotion-cache-j7qwjs { /* Sidebar Nav Links */
+        padding: 0.75rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease-in-out;
+        font-weight: 600;
+    }
+    .st-emotion-cache-j7qwjs:hover {
+        background-color: rgba(167, 112, 239, 0.2);
+        color: #CF8BF3;
+    }
+    .st-emotion-cache-j7qwjs.st-emotion-cache-j7qwjs.st-emotion-cache-18l0hbk { /* Active Nav Link */
+        background-color: #A770EF;
+        color: white;
+    }
+
+    /* --- General UI Elements --- */
+    h1, h2, h3, h4, h5, h6 {
+        color: #FFFFFF;
+    }
+    h1 {
+        font-weight: 700;
+        letter-spacing: -2px;
+        background: linear-gradient(90deg, #CF8BF3, #A770EF, #FDB99B, #CF8BF3);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        animation: textShine 5s linear infinite;
+    }
+    @keyframes textShine { to { background-position: 200% center; } }
+
+    /* --- Custom Card Component --- */
+    .metric-card, .chart-card, .content-card {
+        background: rgba(10, 5, 30, 0.75);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(20px);
+        transition: all 0.3s ease;
+        animation: fadeIn 0.5s ease;
+    }
+    .metric-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
     
+    /* --- Animations --- */
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+    """
+    st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
+
+
+# --- Dashboard Page ---
+def render_dashboard():
+    st.title("📈 Analytics Dashboard")
+    st.markdown("Welcome to the ChainCompass AI Suite. Here's a real-time overview of cross-chain activity.")
+
+    # --- Metrics Row ---
+    st.markdown("### Key Metrics", help="These are simulated metrics for demonstration purposes.")
+    m1, m2, m3, m4 = st.columns(4)
+    with m1:
+        st.markdown('<div class="metric-card"><h4>Total Value Swapped</h4><h2>$1.2B</h2><p style="color: #4CAF50;">+2.5% last 24h</p></div>', unsafe_allow_html=True)
+    with m2:
+        st.markdown('<div class="metric-card"><h4>Transactions (24h)</h4><h2>15,203</h2><p style="color: #F44336;">-1.8% vs yesterday</p></div>', unsafe_allow_html=True)
+    with m3:
+        st.markdown('<div class="metric-card"><h4>Avg. Swap Time</h4><h2>85s</h2><p style="color: #4CAF50;">-12% faster</p></div>', unsafe_allow_html=True)
+    with m4:
+        st.markdown('<div class="metric-card"><h4>Supported Chains</h4><h2>12</h2><p>+2 new integrations</p></div>', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    # --- Charts Row ---
+    c1, c2 = st.columns(2)
+    with c1:
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.subheader("Swap Volume by Chain")
+        # Create a sample DataFrame for Plotly
+        df_chains = pd.DataFrame({
+            'Chain': ['Polygon', 'Arbitrum', 'Optimism', 'Base', 'Ethereum'],
+            'Volume': [450, 320, 210, 150, 90]
+        })
+        fig = go.Figure(data=[go.Bar(
+            x=df_chains['Chain'], y=df_chains['Volume'],
+            marker_color=['#A770EF', '#CF8BF3', '#FDB99B', '#A770EF', '#CF8BF3']
+        )])
+        fig.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font_color="white", margin=dict(l=20, r=20, t=40, b=20)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with c2:
+        st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+        st.subheader("Popular Token Swaps")
+        df_tokens = pd.DataFrame({
+            'Token': ['USDC', 'ETH', 'USDT', 'WBTC', 'Other'],
+            'Percentage': [55, 25, 12, 5, 3]
+        })
+        fig2 = go.Figure(data=[go.Pie(
+            labels=df_tokens['Token'], values=df_tokens['Percentage'], hole=.4,
+            marker_colors=['#A770EF', '#CF8BF3', '#FDB99B', '#8A2BE2', '#4B0082']
+        )])
+        fig2.update_layout(
+            paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)',
+            font_color="white", legend_orientation="h", margin=dict(l=20, r=20, t=40, b=20)
+        )
+        st.plotly_chart(fig2, use_container_width=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+# --- Swap AI Page ---
+def render_swap_ai():
+    st.title("🤖 Swap AI Assistant")
+    st.caption("Your smart guide for finding the best cross-chain swap routes.")
+
+    # Use a container to apply the card style
+    with st.container():
+        st.markdown('<div class="content-card">', unsafe_allow_html=True)
+        st.subheader("⚙️ Enter Swap Details")
+        CHAINS = {"Polygon": "POL", "Arbitrum": "ARB", "Ethereum": "ETH", "Optimism": "OPT", "Base": "BASE"}
+        TOKENS = {"USDC": "USDC", "Ethereum": "ETH", "Tether": "USDT", "Wrapped BTC": "WBTC"}
+
+        col1, col2 = st.columns(2)
+        with col1:
+            from_chain_name = st.selectbox("From Chain", options=list(CHAINS.keys()), key="from_chain")
+            from_token_name = st.selectbox("Token to Swap", options=list(TOKENS.keys()), key="from_token")
+        with col2:
+            to_chain_name = st.selectbox("To Chain", options=list(CHAINS.keys()), index=1, key="to_chain")
+            to_token_name = st.selectbox("Token to Receive", options=list(TOKENS.keys()), index=1, key="to_token")
+        
+        from_amount_display = st.number_input(f"Amount of {from_token_name} to Swap", value=100.0, min_value=0.01, step=10.0)
+        
+        if st.button("Find Best Route", type="primary", use_container_width=True):
+            st.session_state.result = None
+            with st.spinner("Finding the best route across the globe..."):
+                api_url = "https://chaincompass-ai-krishnav.onrender.com/api/v1/quote"
+                decimals = 6 if TOKENS[from_token_name] == "USDC" else 18
+                params = {
+                    "fromChain": CHAINS[from_chain_name], "toChain": CHAINS[to_chain_name],
+                    "fromToken": TOKENS[from_token_name], "toToken": TOKENS[to_token_name],
+                    "fromAmount": int(from_amount_display * (10**decimals))
+                }
+                try:
+                    response = requests.get(api_url, params=params, timeout=60)
+                    response.raise_for_status()
+                    st.session_state.result = response.json()
+                except Exception as e:
+                    st.session_state.result = {"error": "An error occurred", "details": str(e)}
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # Display Result
+    if 'result' in st.session_state and st.session_state.result:
+        if "error" in st.session_state.result:
+            st.error(f"Error: {st.session_state.result.get('details', 'Unknown error')}")
+        else:
+            st.markdown(f'''
+            <div class="content-card" style="margin-top: 2rem; border-left: 5px solid #A770EF;">
+                <h3>🏆 AI Recommendation</h3>
+                <p>{st.session_state.result.get("summary", "No summary available.")}</p>
+            </div>
+            ''', unsafe_allow_html=True)
+
+# --- About Page ---
+def render_about_page():
+    st.title("📖 About ChainCompass AI")
+    st.markdown('<div class="content-card">', unsafe_allow_html=True)
+    st.image("logo.png", width=100)
+    st.subheader("Mission")
+    st.write("""
+    ChainCompass AI solves the problem of complexity in Decentralized Finance (DeFi). Finding the best route to swap tokens across different blockchains is a confusing and risky process for most users. This application provides a simple, intuitive interface where a user can define their desired swap. The backend then queries the LI.FI aggregation API to find the optimal route based on cost and speed. Finally, the complex data is summarized into a simple, human-readable recommendation using a Large Language Model (LLM).
+    """)
+    st.subheader("Technology Stack")
+    st.markdown("""
+    - **Frontend:** Streamlit (Multi-Page App)
+    - **Backend:** FastAPI, deployed on Render
+    - **AI Integration:** LangChain with OpenAI (gpt-4o-mini)
+    - **Data Source:** LI.FI API for live swap quotes
+    - **Visualizations:** Plotly for interactive charts
+    """)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# Button logic and API call
-if st.button("Find Best Route", type="primary", use_container_width=True):
-    st.session_state.result = None # Clear previous results
-    
-    with st.spinner("Finding the best route across the globe..."):
-        time.sleep(2) # Simulate work
-        api_url = "https://chaincompass-ai-krishnav.onrender.com/api/v1/quote"
-        decimals = 6 if TOKENS[from_token_name] == "USDC" else 18
-        params = {
-            "fromChain": CHAINS[from_chain_name], "toChain": CHAINS[to_chain_name],
-            "fromToken": TOKENS[from_token_name], "toToken": TOKENS[to_token_name],
-            "fromAmount": int(from_amount_display * (10**decimals))
-        }
+# --- Main App Router ---
+def main():
+    apply_custom_styling()
+
+    # --- Sidebar Navigation Setup ---
+    with st.sidebar:
+        st.image("logo.png", use_container_width=True)
+        st.header("Navigation")
         
+        # Using st.page_link for modern navigation (requires Streamlit 1.34+)
+        # Fallback to radio buttons if page_link is not available
         try:
-            response = requests.get(api_url, params=params, timeout=60)
-            response.raise_for_status()
-            st.session_state.result = response.json()
-        except Exception as e:
-            st.session_state.result = {"error": "An error occurred", "details": str(e)}
+            st.page_link(page="app.py", label="Dashboard", icon="📊")
+            st.page_link(page="app.py", label="Swap AI", icon="🤖")
+            st.page_link(page="app.py", label="About", icon="📖")
+            
+            # This is a bit of a hack to determine the active page with page_link
+            # A more robust solution might use query params
+            if 'active_page' not in st.session_state:
+                st.session_state.active_page = "Dashboard"
 
-# Display Result
-if st.session_state.result:
-    if "error" in st.session_state.result:
-        st.error(f"Error: {st.session_state.result.get('details', 'Unknown error')}")
+            # The UI won't show selection, but we can manage state
+            # This is a limitation of this simple routing method
+            
+        except AttributeError: # Fallback for older Streamlit versions
+             st.session_state.active_page = st.radio(
+                 "Go to", 
+                 ["Dashboard", "Swap AI", "About"], 
+                 label_visibility="collapsed"
+             )
+
+
+    # This is a simple router. A real large-scale app might use a more complex system.
+    # We will simulate page navigation by checking the radio button state.
+    # NOTE: This simple router re-runs the whole script on page change.
+    
+    # Simple query param based router for page_link to work
+    query_params = st.query_params
+    if "page" in query_params:
+        st.session_state.active_page = query_params["page"]
     else:
-        st.markdown(f'''
-        <div class="result-card card">
-            <h3>🏆 AI Recommendation</h3>
-            <p>{st.session_state.result.get("summary", "No summary available.")}</p>
-            <div class="route-viz">
-                 <div class="chain"><span>{from_chain_name}</span></div>
-                 <div class="line"></div>
-                 <div class="chain"><span>Protocol</span></div>
-                 <div class="line"></div>
-                 <div class="chain"><span>{to_chain_name}</span></div>
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+        # Default to dashboard if no page is specified
+        st.session_state.active_page = "Dashboard"
 
-# Inject the final JS for mouse effects
-local_js("effects.js")
+    if st.session_state.active_page == "Dashboard":
+        render_dashboard()
+    elif st.session_state.active_page == "Swap AI":
+        render_swap_ai()
+    elif st.session_state.active_page == "About":
+        render_about_page()
+    else:
+        render_dashboard() # Default page
+
+if __name__ == "__main__":
+    # Note: Streamlit's native multi-page app feature works by placing files
+    # in a `pages/` directory. Since we must use a single file, we are
+    # building a custom "router" here to simulate the experience.
+    main()
 
