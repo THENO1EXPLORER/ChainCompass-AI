@@ -1,6 +1,9 @@
 import streamlit as st
 import requests
 
+# Use the sidebar for the logo
+st.sidebar.image("logo.png", use_column_width=True)
+
 # Set up the title and icon of the web page
 st.set_page_config(page_title="ChainCompass AI", page_icon="🧭")
 st.title("🧭 ChainCompass AI")
@@ -37,8 +40,8 @@ if st.button("Find Best Route"):
         try:
             # Make the request to your FastAPI backend
             response = requests.get(api_url, params=params)
-            response.raise_for_status() # Raise an error on a bad response
-            
+            response.raise_for_status()  # Raise an error on a bad response
+
             result = response.json()
 
             st.subheader("🏆 Your AI Recommendation")
@@ -51,12 +54,22 @@ if st.button("Find Best Route"):
                 ai_summary = result.get("summary", "No summary available.")
                 # Display the AI's sentence using markdown for better rendering
                 st.markdown(f"""
-                 <div style="padding: 1rem; border-radius: 0.5rem; background-color: #d4edda; border-left: 6px solid #28a745;">
-                 <p style="color: #155724; margin-bottom: 0;">{ai_summary}</p>
-                 </div>
+                    <div style="padding: 1rem; border-radius: 0.5rem; background-color: #d4edda; border-left: 6px solid #28a745;">
+                    <p style="color: #155724; margin-bottom: 0;">{ai_summary}</p>
+                    </div>
                 """, unsafe_allow_html=True)
 
         except requests.exceptions.RequestException as e:
             st.error(f"Could not connect to the backend server. Make sure it's running. Error: {e}")
         except Exception as e:
             st.error(f"An unexpected error occurred: {e}")
+
+# --- About section, placed at the end to be always visible ---
+with st.expander("ℹ️ About This App & How It Works"):
+    st.write("""
+    This app is a full-stack AI application built to simplify cross-chain swaps.
+    - The **frontend** you're using is built with **Streamlit**.
+    - The **backend** is a **FastAPI** server deployed on **Render**.
+    - When you click the button, the frontend calls the backend, which then calls the **LI.FI API** to find the best route.
+    - The complex data is then summarized by an AI using **LangChain** and presented to you.
+    """)
