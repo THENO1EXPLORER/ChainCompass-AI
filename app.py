@@ -25,7 +25,6 @@ def apply_custom_styling():
         background-color: #020418;
     }
     
-    /* --- Main App Background --- */
     #root > div:nth-child(1) > div > div > div > div {
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100%25' height='100%25' viewBox='0 0 1600 800'%3E%3Cg %3E%3Cpolygon fill='%23050928' points='1600 160 0 460 0 350 1600 50'%3E%3C/polygon%3E%3Cpolygon fill='%23080e38' points='1600 260 0 560 0 450 1600 150'%3E%3C/polygon%3E%3Cpolygon fill='%230b1348' points='1600 360 0 660 0 550 1600 250'%3E%3C/polygon%3E%3Cpolygon fill='%230e1858' points='1600 460 0 760 0 650 1600 350'%3E%3C/polygon%3E%3Cpolygon fill='%23111D68' points='1600 800 0 800 0 750 1600 450'%3E%3C/polygon%3E%3C/g%3E%3C/svg%3E");
         background-attachment: fixed;
@@ -38,28 +37,19 @@ def apply_custom_styling():
         backdrop-filter: blur(15px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
+    [data-testid="stSidebar"] .stButton button {
+        background-color: transparent;
+        color: #FFFFFF;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        transition: all 0.2s ease-in-out;
+        font-weight: 600;
+    }
+    [data-testid="stSidebar"] .stButton button:hover {
+        background-color: rgba(167, 112, 239, 0.2);
+        color: #CF8BF3;
+        border-color: #A770EF;
+    }
     
-    /* --- Masterpiece Page Transition --- */
-    #transition-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        z-index: 9999;
-        display: grid;
-        grid-template-columns: repeat(20, 1fr);
-        pointer-events: none;
-    }
-    .transition-tile {
-        background-color: #A770EF;
-        transform: scaleY(0);
-        transition: transform 0.5s ease-in-out;
-    }
-    #transition-overlay.active .transition-tile {
-        transform: scaleY(1);
-    }
-
     /* --- General UI Elements --- */
     h1 {
         font-weight: 700;
@@ -70,6 +60,26 @@ def apply_custom_styling():
         animation: textShine 5s linear infinite, fadeIn 0.8s ease;
     }
     @keyframes textShine { to { background-position: 200% center; } }
+
+    /* --- Custom Form Elements --- */
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div, 
+    [data-testid="stNumberInput"] div[data-baseweb="input"] > div {
+        background-color: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+    }
+    
+    /* --- Main Action Button --- */
+    .stButton > button[kind="primary"] {
+        background: linear-gradient(90deg, #A770EF, #CF8BF3);
+        color: white;
+        border: none;
+        transition: all 0.3s ease;
+    }
+    .stButton > button[kind="primary"]:hover {
+        box-shadow: 0 0 15px #A770EF;
+        transform: translateY(-2px);
+    }
 
     /* --- Custom Card Component --- */
     .metric-card, .chart-card, .content-card {
@@ -86,28 +96,6 @@ def apply_custom_styling():
     """
     st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
     
-    # Inject HTML & JS for the transition
-    components.html("""
-        <div id="transition-overlay"></div>
-        <script>
-            // Create 20 tiles for the transition effect
-            const overlay = document.getElementById('transition-overlay');
-            for (let i = 0; i < 20; i++) {
-                const tile = document.createElement('div');
-                tile.classList.add('transition-tile');
-                // Stagger the animation delay for each tile
-                tile.style.transitionDelay = `${i * 0.02}s`;
-                overlay.appendChild(tile);
-            }
-
-            const buttons = window.parent.document.querySelectorAll('[data-testid="stSidebar"] button');
-            buttons.forEach(button => {
-                button.addEventListener('click', function() {
-                    overlay.classList.add('active');
-                });
-            });
-        </script>
-    """, height=0)
 
 # --- Caching Data Generation Functions ---
 @st.cache_data
@@ -183,12 +171,15 @@ def render_swap_ai():
         st.markdown('</div>', unsafe_allow_html=True)
 
     if 'result' in st.session_state and st.session_state.result:
-        st.markdown(f'''
-        <div class="content-card" style="margin-top: 2rem; border-left: 5px solid #A770EF;">
-            <h3>🏆 AI Recommendation</h3>
-            <p>{st.session_state.result.get("summary", "No summary available.")}</p>
-        </div>
-        ''', unsafe_allow_html=True)
+        if "error" in st.session_state.result:
+            st.error(f"Error: {st.session_state.result.get('details', 'Unknown error')}")
+        else:
+            st.markdown(f'''
+            <div class="content-card" style="margin-top: 2rem; border-left: 5px solid #A770EF;">
+                <h3>🏆 AI Recommendation</h3>
+                <p>{st.session_state.result.get("summary", "No summary available.")}</p>
+            </div>
+            ''', unsafe_allow_html=True)
 
 def render_about_page():
     st.title("📖 About ChainCompass AI")
@@ -211,10 +202,13 @@ def main():
         if 'active_page' not in st.session_state:
             st.session_state.active_page = "Dashboard"
 
-        for page in pages:
-            if st.button(page, use_container_width=True, key=f"nav_{page}"):
-                st.session_state.active_page = page
-                st.rerun()
+        # Use a hidden radio button to control state and styled buttons for UI
+        # This is a robust method for single-page app navigation
+        active_page = st.radio("Main navigation", pages, key="nav_radio", label_visibility="collapsed")
+        
+        if active_page != st.session_state.active_page:
+             st.session_state.active_page = active_page
+             st.rerun()
 
     page_functions = {"Dashboard": render_dashboard, "Swap AI": render_swap_ai, "About": render_about_page}
     page_functions[st.session_state.active_page]()
