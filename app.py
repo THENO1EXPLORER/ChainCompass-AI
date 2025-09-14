@@ -14,6 +14,35 @@ st.set_page_config(
 )
 
 # --- Asset & Style Management ---
+@st.cache_data
+def get_logo_as_html():
+    """Returns the SVG code for the new, polished logo as an HTML string."""
+    logo_svg = """
+    <svg width="100%" viewBox="0 0 150 150" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+            <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#A770EF;stop-opacity:1" />
+                <stop offset="100%" style="stop-color:#CF8BF3;stop-opacity:1" />
+            </linearGradient>
+            <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+                <feGaussianBlur stdDeviation="5" result="coloredBlur"/>
+                <feMerge>
+                    <feMergeNode in="coloredBlur"/>
+                    <feMergeNode in="SourceGraphic"/>
+                </feMerge>
+            </filter>
+        </defs>
+        <circle cx="75" cy="75" r="65" fill="rgba(10, 5, 30, 0.75)" stroke="url(#grad1)" stroke-width="2" filter="url(#glow)"/>
+        <path d="M75 20 L85 65 L75 55 L65 65 Z" fill="url(#grad1)"/>
+        <path d="M75 130 L65 85 L75 95 L85 85 Z" fill="url(#grad1)" opacity="0.7"/>
+        <path d="M20 75 L65 85 L55 75 L65 65 Z" fill="url(#grad1)" opacity="0.7"/>
+        <path d="M130 75 L85 65 L95 75 L85 85 Z" fill="url(#grad1)" opacity="0.7"/>
+        <circle cx="75" cy="75" r="15" fill="#020418"/>
+        <text x="75" y="82" font-family="Poppins, sans-serif" font-size="14" fill="#CF8BF3" text-anchor="middle" font-weight="600">AI</text>
+    </svg>
+    """
+    return f'<div style="padding: 1rem;">{logo_svg}</div>'
+
 def apply_custom_styling():
     """Injects all custom CSS for the entire multi-page application."""
     custom_css = """
@@ -99,7 +128,6 @@ def apply_custom_styling():
     .tech-badges img:hover { transform: scale(1.1); }
     """
     st.markdown(f"<style>{custom_css}</style>", unsafe_allow_html=True)
-    
 
 # --- Caching Data Generation Functions ---
 @st.cache_data
@@ -203,7 +231,7 @@ def render_about_page():
     </h1>
     """, unsafe_allow_html=True)
     st.markdown('<div class="content-card">', unsafe_allow_html=True)
-    st.image("logo.png", width=100)
+    st.markdown(get_logo_as_html(), unsafe_allow_html=True)
     st.subheader("Mission")
     st.write("ChainCompass AI solves the problem of complexity in Decentralized Finance (DeFi)...")
     st.subheader("Technology Stack")
@@ -227,38 +255,18 @@ def main():
     apply_custom_styling()
 
     with st.sidebar:
-        st.image("logo.png", use_container_width=True)
+        st.markdown(get_logo_as_html(), unsafe_allow_html=True)
         st.header("Navigation")
-        pages = {"Dashboard": "📈", "Swap AI": "🤖", "About": "📖"}
+        pages = ["Dashboard", "Swap AI", "About"]
         
         if 'active_page' not in st.session_state:
             st.session_state.active_page = "Dashboard"
 
-        # This logic creates custom buttons and manages the active state
-        for page, icon in pages.items():
-            button_key = f"nav_button_{page}"
-            is_active = (st.session_state.active_page == page)
-            # Use st.markdown for a custom button, and st.button for the action
-            # This is a workaround to apply custom classes
-            st.markdown(f'<div class="nav-btn-wrapper">', unsafe_allow_html=True)
-            if st.button(f"{icon} {page}", key=button_key, use_container_width=True):
-                st.session_state.active_page = page
-                st.rerun()
-            st.markdown(f'</div>', unsafe_allow_html=True)
-            
-            # This is a javascript hack to add the 'active' class
-            if is_active:
-                components.html(f"""
-                <script>
-                    var buttons = parent.document.querySelectorAll('button');
-                    buttons.forEach(function(button) {{
-                        if (button.innerText.includes("{page}")) {{
-                            button.classList.add('active');
-                        }}
-                    }});
-                </script>
-                """, height=0)
-
+        active_page = st.radio("Main navigation", pages, key="nav_radio", label_visibility="collapsed")
+        
+        if active_page != st.session_state.active_page:
+             st.session_state.active_page = active_page
+             st.rerun()
 
     page_functions = {"Dashboard": render_dashboard, "Swap AI": render_swap_ai, "About": render_about_page}
     page_functions[st.session_state.active_page]()
