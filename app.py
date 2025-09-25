@@ -708,17 +708,6 @@ def render_swap_ai():
             </div>
             """, unsafe_allow_html=True)
     
-    # Amount input with enhanced styling
-    st.markdown("**Amount to Swap**")
-    from_amount_display = st.number_input(
-        f"Enter amount of {from_token_name} to swap", 
-        value=100.0, 
-        min_value=0.01, 
-        step=10.0,
-        key="amount_input",
-        label_visibility="collapsed"
-    )
-    
     # Quick amount buttons
     st.markdown("**Quick Amounts**")
     quick_cols = st.columns(5)
@@ -726,8 +715,19 @@ def render_swap_ai():
     for i, amount in enumerate(quick_amounts):
         with quick_cols[i]:
             if st.button(f"${amount}", key=f"quick_{amount}", use_container_width=True):
-                st.session_state.amount_input = float(amount)
+                st.session_state["desired_amount"] = float(amount)
                 st.rerun()
+
+    # Amount input with enhanced styling (widget key distinct from session key)
+    st.markdown("**Amount to Swap**")
+    from_amount_display = st.number_input(
+        f"Enter amount of {from_token_name} to swap", 
+        value=float(st.session_state.get("desired_amount", 100.0)), 
+        min_value=0.01, 
+        step=10.0,
+        key="amount_input_widget",
+        label_visibility="collapsed"
+    )
     
     # Enhanced swap button with loading state
     if st.button("🚀 Find Best Route", type="primary", use_container_width=True):
