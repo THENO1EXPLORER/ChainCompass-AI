@@ -1,11 +1,18 @@
 import os
-import requests
 import json
-from fastapi import FastAPI
+import asyncio
+from typing import Optional
+
+import httpx
+from fastapi import FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
 from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
-from pydantic import SecretStr
+from pydantic import SecretStr, BaseModel, Field
+from cachetools import TTLCache
+from tenacity import AsyncRetrying, stop_after_attempt, wait_exponential, retry_if_exception_type
 
 # --- 1. Load and Validate Environment Variables ---
 # This loads the .env file at the start of the application.
@@ -27,6 +34,25 @@ print("✅ API keys and environment variables loaded successfully.")
 
 # Create an instance of the FastAPI class, which is our backend server.
 app = FastAPI(title="ChainCompass API")
+
+# Enable CORS for local dev and deployed frontend
+allowed_origins = [
+    "http://localhost",
+    "http://localhost:8501",
+    "http://127.0.0.1:8501",
+    "https://chaincompass-ai-theno1explorer.streamlit.app",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
+)
+
+# Enable gzip compression for faster responses
+app.add_middleware(GZipMiddleware, minimum_size=500)
 
 # Initialize the OpenAI model we want to use (gpt-4o-mini for speed and cost).
 # We wrap the API key in SecretStr to resolve the type warning.
@@ -81,46 +107,119 @@ def read_root():
     """A simple endpoint to confirm the server is running."""
     return {"message": "Welcome to the ChainCompass API!"}
 
-@app.get("/api/v1/quote")
-def get_lifi_quote(fromChain: str, toChain: str, fromToken: str, toToken: str, fromAmount: str):
-    """
-    This is the main endpoint. It takes swap details from the Streamlit frontend,
-    fetches the best quote from LI.FI, parses it, and returns an AI-generated summary.
-    """
-    params = {
-        "fromChain": fromChain,
-        "toChain": toChain,
-        "fromToken": fromToken,
-        "toToken": toToken,
-        "fromAmount": fromAmount,
-        "fromAddress": "0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045" # A placeholder address
-    }
-    api_url = "https://li.quest/v1/quote"
-    
-    # Headers are required for authentication with the LI.FI API.
-    headers = {
-        "accept": "application/json",
-        "x-lifi-api-key": LIFI_API_KEY # Use the key we loaded
-    }
+@app.get("/health")
+async def health() -> dict:
+    return {"status": "ok"}
 
-    try:
-        # Make the actual request to the LI.FI server.
-        response = requests.get(api_url, params=params, headers=headers)
-        response.raise_for_status() # This will raise an error if the request fails
-        
-        # The main logic pipeline:
-        raw_quote_data = response.json()         # 1. Get raw data
-        clean_summary = parse_quote(raw_quote_data) # 2. Parse it
-        ai_response = chain.invoke(clean_summary)   # 3. Send to AI
-        ai_summary = ai_response.content          # 4. Get AI's text back
-        
-        # Return the final summary to the Streamlit frontend.
-        return {"summary": ai_summary}
-        
-    except requests.exceptions.HTTPError as err:
-        # Handle errors from the LI.FI API specifically
-        return {"error": "Failed to fetch quote from LI.FI", "details": err.response.text}
-    except Exception as err:
-        # Handle any other unexpected errors
-        return {"error": "An unexpected error occurred", "details": str(err)}
+# Shared HTTP client with connection pooling
+async_client: Optional[httpx.AsyncClient] = None
+
+@app.on_event("startup")
+async def on_startup() -> None:
+    global async_client
+    async_client = httpx.AsyncClient(
+        base_url="https://li.quest",
+        timeout=httpx.Timeout(15.0, read=15.0, connect=10.0),
+        headers={
+            "accept": "application/json",
+            "x-lifi-api-key": LIFI_API_KEY,
+        },
+        limits=httpx.Limits(max_connections=100, max_keepalive_connections=20),
+        transport=httpx.AsyncHTTPTransport(retries=0)
+    )
+
+@app.on_event("shutdown")
+async def on_shutdown() -> None:
+    global async_client
+    if async_client is not None:
+        await async_client.aclose()
+        async_client = None
+
+# In-memory TTL cache for quotes
+quote_cache: TTLCache = TTLCache(maxsize=1000, ttl=60)
+
+# Request/Response models
+class QuoteRequest(BaseModel):
+    fromChain: str = Field(..., min_length=2, max_length=10)
+    toChain: str = Field(..., min_length=2, max_length=10)
+    fromToken: str = Field(..., min_length=2, max_length=12)
+    toToken: str = Field(..., min_length=2, max_length=12)
+    fromAmount: str = Field(..., pattern=r"^\d{1,30}$")
+    fromAddress: Optional[str] = Field(
+        default="0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045"
+    )
+
+class QuoteSummary(BaseModel):
+    summary: str
+    provider: Optional[str] = None
+    time_seconds: Optional[int] = None
+    fees_usd: Optional[float] = None
+    output_usd: Optional[float] = None
+
+@app.get("/api/v1/quote", response_model=QuoteSummary)
+async def get_lifi_quote(
+    fromChain: str = Query(..., min_length=2, max_length=10),
+    toChain: str = Query(..., min_length=2, max_length=10),
+    fromToken: str = Query(..., min_length=2, max_length=12),
+    toToken: str = Query(..., min_length=2, max_length=12),
+    fromAmount: str = Query(..., pattern=r"^\d{1,30}$"),
+    fromAddress: Optional[str] = Query("0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045")
+):
+    """
+    Fetch LI.FI quote (pooled async client + TTL cache + retries) and summarize via LLM.
+    """
+    global async_client
+    if async_client is None:
+        raise HTTPException(status_code=503, detail="HTTP client not ready")
+
+    req = QuoteRequest(
+        fromChain=fromChain,
+        toChain=toChain,
+        fromToken=fromToken,
+        toToken=toToken,
+        fromAmount=fromAmount,
+        fromAddress=fromAddress,
+    )
+
+    cache_key = (req.fromChain, req.toChain, req.fromToken, req.toToken, req.fromAmount, req.fromAddress)
+
+    if cache_key in quote_cache:
+        raw_quote_data = quote_cache[cache_key]
+    else:
+        async def fetch() -> dict:
+            resp = await async_client.get("/v1/quote", params=req.model_dump())
+            resp.raise_for_status()
+            return resp.json()
+
+        try:
+            async for attempt in AsyncRetrying(
+                reraise=True,
+                stop=stop_after_attempt(3),
+                wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
+                retry=retry_if_exception_type((httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError))
+            ):
+                with attempt:
+                    raw_quote_data = await fetch()
+            quote_cache[cache_key] = raw_quote_data
+        except httpx.HTTPStatusError as err:
+            detail = err.response.text if err.response is not None else str(err)
+            status = err.response.status_code if err.response is not None else 502
+            raise HTTPException(status_code=status, detail=f"LI.FI error: {detail}")
+        except (httpx.ConnectError, httpx.ReadTimeout, httpx.RemoteProtocolError) as err:
+            raise HTTPException(status_code=504, detail=f"Upstream timeout: {str(err)}")
+        except Exception as err:
+            raise HTTPException(status_code=502, detail=f"Upstream failure: {str(err)}")
+
+    clean_summary = parse_quote(raw_quote_data)
+    # Offload blocking LLM call to thread executor to avoid blocking event loop
+    ai_response = await asyncio.get_event_loop().run_in_executor(None, chain.invoke, clean_summary)
+    ai_summary = ai_response.content
+
+    return QuoteSummary(
+        summary=ai_summary,
+        provider=clean_summary.get("provider"),
+        time_seconds=clean_summary.get("time_seconds"),
+        fees_usd=clean_summary.get("fees_usd"),
+        output_usd=clean_summary.get("output_usd"),
+    )
 
