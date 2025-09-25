@@ -1,11 +1,13 @@
 import os
+
 import requests
-import json
-from fastapi import FastAPI
-from langchain_openai import ChatOpenAI
-from langchain_core.prompts import ChatPromptTemplate
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from langchain_core.prompts import ChatPromptTemplate
+from langchain_openai import ChatOpenAI
 from pydantic import SecretStr
+
+from chaincompass import parse_quote
 
 # --- 1. Load and Validate Environment Variables ---
 # This loads the .env file at the start of the application.
@@ -48,30 +50,7 @@ chain = prompt | llm
 
 # --- 3. Helper Functions ---
 
-def parse_quote(quote_data):
-    """
-    This function takes the large, complex JSON response from LI.FI
-    and extracts only the key pieces of information we care about.
-    """
-    estimate = quote_data.get("estimate", {})
-    tool_details = quote_data.get("toolDetails", {})
-    provider_name = tool_details.get("name", "N/A")
-    execution_time_seconds = estimate.get("executionDuration", 0)
-    final_output_usd = estimate.get("toAmountUSD", "0")
-    
-    # Calculate the total fees by adding up all fee costs.
-    total_fees_usd = 0
-    for fee in estimate.get("feeCosts", []):
-        total_fees_usd += float(fee.get("amountUSD", "0"))
-        
-    # Return a clean, simple dictionary with our extracted data.
-    summary = {
-        "provider": provider_name,
-        "time_seconds": execution_time_seconds,
-        "fees_usd": total_fees_usd,
-        "output_usd": float(final_output_usd)
-    }
-    return summary
+ 
 
 
 # --- 4. API Endpoints ---

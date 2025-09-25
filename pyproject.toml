@@ -1,0 +1,60 @@
+[project]
+name = "chaincompass-ai"
+version = "0.1.0"
+requires-python = ">=3.10"
+description = "ChainCompass AI – Streamlit frontend and FastAPI backend"
+readme = "README.md"
+
+[tool.black]
+line-length = 100
+target-version = ["py310"]
+include = '\\.(py|pyi)$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+known_first_party = ["chaincompass"]
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+src = ["."]
+exclude = [
+  ".venv",
+  "build",
+  "dist",
+  "__pycache__",
+]
+lint.select = [
+  "E",  # pycodestyle errors
+  "F",  # pyflakes
+  "I",  # isort
+  "UP", # pyupgrade
+  "B",  # flake8-bugbear
+]
+lint.ignore = [
+  "E203", # whitespace before ':' (black compatibility)
+  "E501", # allow long lines (HTML/CSS, inline SVG)
+  "E701", # allow single-line compound statements in Streamlit layouts
+]
+
+[tool.ruff.format]
+quote-style = "double"
+
+[tool.mypy]
+python_version = "3.10"
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+strict_optional = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_return_any = true
+pretty = true
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+addopts = "-q"
+

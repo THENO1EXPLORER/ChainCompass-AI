@@ -1,9 +1,8 @@
-import streamlit as st
-import requests
-import time
-import streamlit.components.v1 as components
-import plotly.graph_objects as go
 import pandas as pd
+import plotly.graph_objects as go
+import requests
+import streamlit as st
+import streamlit.components.v1 as components
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -229,21 +228,8 @@ def main():
         # This is the corrected, robust navigation logic
         active_page_name = st.session_state.active_page
         for page, icon in pages.items():
-            is_active = (page == active_page_name)
-            button_class = "active_button" if is_active else ""
             
-            # Using st.markdown to create a custom button with a class
-            button_html = f"""
-            <style>
-                .nav_button_{page.replace(" ", "_")} {{
-                    /* Inherit Streamlit's button base style but allow override */
-                }}
-            </style>
-            <div class="stButton">
-                <button class="{button_class}" key="nav_{page}">{icon} {page}</button>
-            </div>
-            """
-            # st.markdown(button_html, unsafe_allow_html=True) # This is a conceptual example, st.button is needed for action
+            # Using st.markdown to create a custom button with a class (omitted)
             
             if st.button(f"{icon} {page}", key=f"nav_{page}", use_container_width=True):
                  st.session_state.active_page = page
