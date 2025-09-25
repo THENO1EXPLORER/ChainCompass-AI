@@ -722,11 +722,11 @@ def render_swap_ai():
     # Quick amount buttons
     st.markdown("**Quick Amounts**")
     quick_cols = st.columns(5)
-    quick_amounts = [50, 100, 500, 1000, 5000]
+    quick_amounts = [50.0, 100.0, 500.0, 1000.0, 5000.0]
     for i, amount in enumerate(quick_amounts):
         with quick_cols[i]:
             if st.button(f"${amount}", key=f"quick_{amount}", use_container_width=True):
-                st.session_state.amount_input = amount
+                st.session_state.amount_input = float(amount)
                 st.rerun()
     
     # Enhanced swap button with loading state
