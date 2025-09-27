@@ -20,7 +20,7 @@ You can try the live application here: https://chaincompass-ai-theno1explorer.st
 
 (Note: The backend is hosted on Render's free tier and may take 30-60 seconds to "wake up" on the first request.)
 
-🎬 Demo GIF
+🎬 Demo GIF  ![alt text](CompassAI.gif)
 📖 About The Project
 ChainCompass AI solves the problem of complexity in Decentralized Finance (DeFi). Finding the best route to swap tokens across different blockchains is a confusing and risky process for most users. This application provides a simple, intuitive interface where a user can define their desired swap. The backend then queries the LI.FI aggregation API to find the optimal route based on cost and speed. Finally, the complex data is summarized into a simple, human-readable recommendation using a Large Language Model (LLM) powered by LangChain and OpenAI.
 
