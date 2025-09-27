@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import pandas as pd
 import os
 from dotenv import load_dotenv
+from typing import Optional
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -58,11 +59,77 @@ def apply_custom_styling():
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
     
+    /* Theme variables: light/dark + Auto (system) support */
     :root {
+        color-scheme: light dark;
         --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --dark-bg: #0a0a0f;
+
+        /* Default to light; overridden by media query or data-theme */
+        --app-bg: #f8fafc;
+        --bg-grad-1: rgba(120, 119, 198, 0.15);
+        --bg-grad-2: rgba(255, 119, 198, 0.15);
+        --bg-grad-3: rgba(120, 219, 255, 0.12);
+        --sidebar-bg: rgba(255, 255, 255, 0.75);
+        --card-bg: rgba(255, 255, 255, 0.65);
+        --card-border: rgba(2, 6, 23, 0.08);
+        --text-primary: #0b1220;
+        --text-secondary: rgba(11, 18, 32, 0.7);
+        --text-accent: #00f2fe;
+        --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.25);
+        --shadow-card: 0 8px 24px rgba(2, 6, 23, 0.08);
+        --surface-muted: rgba(2, 6, 23, 0.03);
+        --spinner-track: rgba(0, 0, 0, 0.15);
+        --scrollbar-track: rgba(0, 0, 0, 0.06);
+    }
+
+    /* Auto (system): dark override when user prefers dark and no manual theme chosen */
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) {
+            --app-bg: #0a0a0f;
+            --bg-grad-1: rgba(120, 119, 198, 0.3);
+            --bg-grad-2: rgba(255, 119, 198, 0.3);
+            --bg-grad-3: rgba(120, 219, 255, 0.2);
+            --sidebar-bg: rgba(10, 10, 15, 0.8);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --text-primary: #ffffff;
+            --text-secondary: rgba(255, 255, 255, 0.7);
+            --text-accent: #00f2fe;
+            --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
+            --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+            --surface-muted: rgba(255, 255, 255, 0.03);
+            --spinner-track: rgba(255, 255, 255, 0.3);
+            --scrollbar-track: rgba(255, 255, 255, 0.1);
+        }
+    }
+
+    /* Explicit theme overrides via data-theme attribute */
+    :root[data-theme="light"] {
+        --app-bg: #f8fafc;
+        --bg-grad-1: rgba(120, 119, 198, 0.15);
+        --bg-grad-2: rgba(255, 119, 198, 0.15);
+        --bg-grad-3: rgba(120, 219, 255, 0.12);
+        --sidebar-bg: rgba(255, 255, 255, 0.75);
+        --card-bg: rgba(255, 255, 255, 0.65);
+        --card-border: rgba(2, 6, 23, 0.08);
+        --text-primary: #0b1220;
+        --text-secondary: rgba(11, 18, 32, 0.7);
+        --text-accent: #00f2fe;
+        --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.25);
+        --shadow-card: 0 8px 24px rgba(2, 6, 23, 0.08);
+        --surface-muted: rgba(2, 6, 23, 0.03);
+        --spinner-track: rgba(0, 0, 0, 0.15);
+        --scrollbar-track: rgba(0, 0, 0, 0.06);
+    }
+
+    :root[data-theme="dark"] {
+        --app-bg: #0a0a0f;
+        --bg-grad-1: rgba(120, 119, 198, 0.3);
+        --bg-grad-2: rgba(255, 119, 198, 0.3);
+        --bg-grad-3: rgba(120, 219, 255, 0.2);
+        --sidebar-bg: rgba(10, 10, 15, 0.8);
         --card-bg: rgba(255, 255, 255, 0.05);
         --card-border: rgba(255, 255, 255, 0.1);
         --text-primary: #ffffff;
@@ -70,13 +137,16 @@ def apply_custom_styling():
         --text-accent: #00f2fe;
         --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
         --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+        --surface-muted: rgba(255, 255, 255, 0.03);
+        --spinner-track: rgba(255, 255, 255, 0.3);
+        --scrollbar-track: rgba(255, 255, 255, 0.1);
     }
     
     * { box-sizing: border-box; }
     
     body { 
         font-family: 'Inter', sans-serif; 
-        background: var(--dark-bg);
+        background: var(--app-bg);
         margin: 0;
         padding: 0;
         overflow-x: hidden;
@@ -86,7 +156,7 @@ def apply_custom_styling():
     .main-container {
         position: relative;
         min-height: 100vh;
-        background: radial-gradient(ellipse at top, #1a1a2e 0%, #16213e 50%, #0a0a0f 100%);
+        background: radial-gradient(ellipse at top, var(--bg-grad-1) 0%, var(--bg-grad-2) 50%, var(--app-bg) 100%);
         overflow: hidden;
     }
     
@@ -98,9 +168,9 @@ def apply_custom_styling():
         width: 100%;
         height: 100%;
         background: 
-            radial-gradient(circle at 20% 80%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 80% 20%, rgba(255, 119, 198, 0.3) 0%, transparent 50%),
-            radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.2) 0%, transparent 50%);
+            radial-gradient(circle at 20% 80%, var(--bg-grad-1) 0%, transparent 50%),
+            radial-gradient(circle at 80% 20%, var(--bg-grad-2) 0%, transparent 50%),
+            radial-gradient(circle at 40% 40%, var(--bg-grad-3) 0%, transparent 50%);
         animation: backgroundShift 20s ease-in-out infinite;
         z-index: -1;
     }
@@ -139,7 +209,7 @@ def apply_custom_styling():
     
     /* Sidebar styling */
     [data-testid="stSidebar"] {
-        background: rgba(10, 10, 15, 0.8) !important;
+        background: var(--sidebar-bg) !important;
         backdrop-filter: blur(20px) !important;
         border-right: 1px solid var(--card-border) !important;
         box-shadow: var(--shadow-card) !important;
@@ -383,7 +453,7 @@ def apply_custom_styling():
         display: inline-block;
         width: 20px;
         height: 20px;
-        border: 3px solid rgba(255, 255, 255, 0.3);
+        border: 3px solid var(--spinner-track);
         border-radius: 50%;
         border-top-color: var(--text-accent);
         animation: spin 1s ease-in-out infinite;
@@ -449,7 +519,7 @@ def apply_custom_styling():
     }
     
     ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--scrollbar-track);
     }
     
     ::-webkit-scrollbar-thumb {
@@ -474,14 +544,31 @@ def apply_custom_styling():
 def generate_volume_chart():
     df_chains = pd.DataFrame({'Chain': ['Polygon', 'Arbitrum', 'Optimism', 'Base', 'Ethereum'],'Volume (Millions)': [450, 320, 210, 150, 90]})
     fig = go.Figure(data=[go.Bar(x=df_chains['Chain'], y=df_chains['Volume (Millions)'], marker_color=['#A770EF', '#CF8BF3', '#FDB99B', '#A770EF', '#CF8BF3'])])
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", margin=dict(l=20, r=20, t=20, b=20))
+    theme_choice = st.session_state.get("theme_choice", "Auto")
+    is_dark = True if theme_choice == "Dark" else False if theme_choice == "Light" else True
+    fig.update_layout(
+        template='plotly_dark' if is_dark else 'plotly_white',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color=("white" if is_dark else "#0b1220"),
+        margin=dict(l=20, r=20, t=20, b=20)
+    )
     return fig
 
 @st.cache_data
 def generate_token_pie_chart():
     df_tokens = pd.DataFrame({'Token': ['USDC', 'ETH', 'USDT', 'WBTC', 'Other'], 'Percentage': [55, 25, 12, 5, 3]})
     fig = go.Figure(data=[go.Pie(labels=df_tokens['Token'], values=df_tokens['Percentage'], hole=.4, marker_colors=['#A770EF', '#CF8BF3', '#FDB99B', '#8A2BE2', '#4B0082'])])
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", legend_orientation="h", margin=dict(l=20, r=20, t=20, b=20))
+    theme_choice = st.session_state.get("theme_choice", "Auto")
+    is_dark = True if theme_choice == "Dark" else False if theme_choice == "Light" else True
+    fig.update_layout(
+        template='plotly_dark' if is_dark else 'plotly_white',
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color=("white" if is_dark else "#0b1220"),
+        legend_orientation="h",
+        margin=dict(l=20, r=20, t=20, b=20)
+    )
     return fig
 
 # --- Page Rendering Functions ---
@@ -604,13 +691,13 @@ def render_dashboard():
     
     for activity in activity_data:
         st.markdown(f"""
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin: 0.5rem 0; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border-left: 3px solid var(--text-accent);">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin: 0.5rem 0; background: var(--surface-muted); border-radius: 8px; border-left: 3px solid var(--text-accent);">
             <div>
                 <strong>{activity['amount']}</strong> {activity['token']} on <strong>{activity['chain']}</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <span style="color: var(--text-secondary); font-size: 0.9rem;">{activity['time']}</span>
-                <span style="color: #22c55e; font-size: 0.8rem; background: rgba(34, 197, 94, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px;">{activity['status']}</span>
+                <span style="color: #22c55e; font-size: 0.8rem; background: rgba(34, 197, 94, 0.15); padding: 0.25rem 0.5rem; border-radius: 4px;">{activity['status']}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -668,7 +755,7 @@ def render_swap_ai():
         if from_chain_name:
             chain_info = CHAINS[from_chain_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-muted); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.5rem;">{chain_info['icon']}</span>
                 <span style="color: {chain_info['color']}; font-weight: 600;">{from_chain_name}</span>
             </div>
@@ -679,7 +766,7 @@ def render_swap_ai():
         if from_token_name:
             token_info = TOKENS[from_token_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-muted); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.2rem;">{token_info['icon']}</span>
                 <span style="font-weight: 600;">{from_token_name}</span>
             </div>
@@ -691,7 +778,7 @@ def render_swap_ai():
         if to_chain_name:
             chain_info = CHAINS[to_chain_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-muted); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.5rem;">{chain_info['icon']}</span>
                 <span style="color: {chain_info['color']}; font-weight: 600;">{to_chain_name}</span>
             </div>
@@ -702,7 +789,7 @@ def render_swap_ai():
         if to_token_name:
             token_info = TOKENS[to_token_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-muted); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.2rem;">{token_info['icon']}</span>
                 <span style="font-weight: 600;">{to_token_name}</span>
             </div>
@@ -862,7 +949,7 @@ def render_about_page():
         
         for feature in features:
             st.markdown(f"""
-            <div style="display: flex; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <div style="display: flex; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--card-border);">
                 <span style="font-size: 1.2rem; margin-right: 0.75rem;">{feature.split(' ')[0]}</span>
                 <span style="color: var(--text-primary);">{' '.join(feature.split(' ')[1:])}</span>
             </div>
@@ -896,6 +983,34 @@ def main():
     
     with st.sidebar:
         st.markdown(get_logo_as_html(), unsafe_allow_html=True)
+        # Theme selector
+        st.markdown("### Appearance")
+        if 'theme_choice' not in st.session_state:
+            st.session_state.theme_choice = "Auto"
+        theme_choice = st.selectbox(
+            "Theme", ["Auto", "Light", "Dark"], index=["Auto", "Light", "Dark"].index(st.session_state.theme_choice), key="theme_choice_select"
+        )
+        st.session_state.theme_choice = theme_choice
+        # Apply theme via data-theme on :root
+        components.html(
+            f"""
+            <script>
+            (function() {{
+              const root = parent.document.documentElement;
+              const choice = {repr(theme_choice)};
+              if (choice === 'Auto') {{
+                root.removeAttribute('data-theme');
+              }} else if (choice === 'Light') {{
+                root.setAttribute('data-theme', 'light');
+              }} else if (choice === 'Dark') {{
+                root.setAttribute('data-theme', 'dark');
+              }}
+            }})();
+            </script>
+            """,
+            height=0
+        )
+
         st.markdown("### Navigation")
         
         pages = {
@@ -928,7 +1043,7 @@ def main():
         # Quick stats in sidebar
         st.markdown("### Quick Stats")
         st.markdown("""
-        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 12px; margin: 1rem 0;">
+        <div style="background: var(--surface-muted); padding: 1rem; border-radius: 12px; margin: 1rem 0;">
             <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
                 <span style="color: var(--text-secondary);">Active Swaps:</span>
                 <span style="color: var(--text-accent); font-weight: 600;">1,247</span>
