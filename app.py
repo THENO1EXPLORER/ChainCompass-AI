@@ -64,6 +64,8 @@ def apply_custom_styling():
         --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
         --text-accent: #00f2fe;
+        --link-color: #93c5fd;
+        --link-hover: #60a5fa;
 
         /* Dark theme defaults */
         --app-bg: #0a0a0f;
@@ -79,7 +81,7 @@ def apply_custom_styling():
         --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
         --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
-
+    
     /* Light theme overrides */
     body[data-theme="light"] {
         --app-bg: #f8fafc;
@@ -93,6 +95,8 @@ def apply_custom_styling():
         --scrollbar-track: rgba(15, 23, 42, 0.08);
         --shadow-glow: 0 0 16px rgba(102, 126, 234, 0.2);
         --shadow-card: 0 8px 24px rgba(2, 6, 23, 0.08);
+        --link-color: #2563eb;
+        --link-hover: #1d4ed8;
     }
     
     * { box-sizing: border-box; }
@@ -100,9 +104,37 @@ def apply_custom_styling():
     body { 
         font-family: 'Inter', sans-serif; 
         background: var(--app-bg);
+        color: var(--text-primary);
         margin: 0;
         padding: 0;
         overflow-x: hidden;
+    }
+    
+    /* Readable defaults for text */
+    .stMarkdown,
+    .stMarkdown p,
+    .stMarkdown li,
+    .stMarkdown span,
+    label,
+    .stText,
+    h2, h3 { color: var(--text-primary) !important; }
+    [data-testid="stCaptionContainer"], small { color: var(--text-secondary) !important; }
+    a { color: var(--link-color) !important; text-decoration: none; }
+    a:hover { color: var(--link-hover) !important; text-decoration: underline; }
+    
+    /* Inputs and placeholders */
+    .stTextInput input,
+    .stNumberInput input,
+    textarea { color: var(--text-primary) !important; }
+    .stTextInput input::placeholder,
+    textarea::placeholder { color: var(--text-secondary) !important; }
+    
+    /* Code blocks */
+    pre, code {
+        color: var(--text-primary) !important;
+        background: var(--card-bg) !important;
+        border: 1px solid var(--card-border) !important;
+        border-radius: 8px !important;
     }
     
     /* Animated background */
