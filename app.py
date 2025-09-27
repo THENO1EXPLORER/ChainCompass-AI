@@ -59,24 +59,47 @@ def apply_custom_styling():
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&display=swap');
     
     :root {
+        /* Common */
         --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        --dark-bg: #0a0a0f;
+        --text-accent: #00f2fe;
+
+        /* Dark theme defaults */
+        --app-bg: #0a0a0f;
+        --dark-bg: #0a0a0f; /* legacy var for compatibility */
         --card-bg: rgba(255, 255, 255, 0.05);
         --card-border: rgba(255, 255, 255, 0.1);
         --text-primary: #ffffff;
         --text-secondary: rgba(255, 255, 255, 0.7);
-        --text-accent: #00f2fe;
+        --sidebar-bg: rgba(10, 10, 15, 0.8);
+        --surface-weak: rgba(255, 255, 255, 0.03);
+        --surface-medium: rgba(255, 255, 255, 0.05);
+        --scrollbar-track: rgba(255, 255, 255, 0.1);
         --shadow-glow: 0 0 20px rgba(102, 126, 234, 0.3);
         --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    /* Light theme overrides */
+    body[data-theme="light"] {
+        --app-bg: #f8fafc;
+        --card-bg: #ffffff;
+        --card-border: rgba(15, 23, 42, 0.08);
+        --text-primary: #0f172a;
+        --text-secondary: rgba(15, 23, 42, 0.7);
+        --sidebar-bg: rgba(255, 255, 255, 0.9);
+        --surface-weak: rgba(15, 23, 42, 0.04);
+        --surface-medium: rgba(15, 23, 42, 0.06);
+        --scrollbar-track: rgba(15, 23, 42, 0.08);
+        --shadow-glow: 0 0 16px rgba(102, 126, 234, 0.2);
+        --shadow-card: 0 8px 24px rgba(2, 6, 23, 0.08);
     }
     
     * { box-sizing: border-box; }
     
     body { 
         font-family: 'Inter', sans-serif; 
-        background: var(--dark-bg);
+        background: var(--app-bg);
         margin: 0;
         padding: 0;
         overflow-x: hidden;
@@ -139,7 +162,7 @@ def apply_custom_styling():
     
     /* Sidebar styling */
     [data-testid="stSidebar"] {
-        background: rgba(10, 10, 15, 0.8) !important;
+        background: var(--sidebar-bg) !important;
         backdrop-filter: blur(20px) !important;
         border-right: 1px solid var(--card-border) !important;
         box-shadow: var(--shadow-card) !important;
@@ -449,7 +472,7 @@ def apply_custom_styling():
     }
     
     ::-webkit-scrollbar-track {
-        background: rgba(255, 255, 255, 0.1);
+        background: var(--scrollbar-track);
     }
     
     ::-webkit-scrollbar-thumb {
@@ -473,15 +496,27 @@ def apply_custom_styling():
 @st.cache_data
 def generate_volume_chart():
     df_chains = pd.DataFrame({'Chain': ['Polygon', 'Arbitrum', 'Optimism', 'Base', 'Ethereum'],'Volume (Millions)': [450, 320, 210, 150, 90]})
+    current_theme = st.session_state.get('theme', 'dark')
+    font_color = "#0f172a" if current_theme == 'light' else "#ffffff"
+    grid_color = "rgba(15, 23, 42, 0.1)" if current_theme == 'light' else "rgba(255, 255, 255, 0.1)"
     fig = go.Figure(data=[go.Bar(x=df_chains['Chain'], y=df_chains['Volume (Millions)'], marker_color=['#A770EF', '#CF8BF3', '#FDB99B', '#A770EF', '#CF8BF3'])])
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", margin=dict(l=20, r=20, t=20, b=20))
+    fig.update_layout(
+        paper_bgcolor='rgba(0,0,0,0)',
+        plot_bgcolor='rgba(0,0,0,0)',
+        font_color=font_color,
+        xaxis=dict(gridcolor=grid_color),
+        yaxis=dict(gridcolor=grid_color),
+        margin=dict(l=20, r=20, t=20, b=20)
+    )
     return fig
 
 @st.cache_data
 def generate_token_pie_chart():
     df_tokens = pd.DataFrame({'Token': ['USDC', 'ETH', 'USDT', 'WBTC', 'Other'], 'Percentage': [55, 25, 12, 5, 3]})
+    current_theme = st.session_state.get('theme', 'dark')
+    font_color = "#0f172a" if current_theme == 'light' else "#ffffff"
     fig = go.Figure(data=[go.Pie(labels=df_tokens['Token'], values=df_tokens['Percentage'], hole=.4, marker_colors=['#A770EF', '#CF8BF3', '#FDB99B', '#8A2BE2', '#4B0082'])])
-    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="white", legend_orientation="h", margin=dict(l=20, r=20, t=20, b=20))
+    fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=font_color, legend_orientation="h", margin=dict(l=20, r=20, t=20, b=20))
     return fig
 
 # --- Page Rendering Functions ---
@@ -604,13 +639,13 @@ def render_dashboard():
     
     for activity in activity_data:
         st.markdown(f"""
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin: 0.5rem 0; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border-left: 3px solid var(--text-accent);">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; margin: 0.5rem 0; background: var(--surface-weak); border-radius: 8px; border-left: 3px solid var(--text-accent);">
             <div>
                 <strong>{activity['amount']}</strong> {activity['token']} on <strong>{activity['chain']}</strong>
             </div>
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <span style="color: var(--text-secondary); font-size: 0.9rem;">{activity['time']}</span>
-                <span style="color: #22c55e; font-size: 0.8rem; background: rgba(34, 197, 94, 0.1); padding: 0.25rem 0.5rem; border-radius: 4px;">{activity['status']}</span>
+                <span style="color: #22c55e; font-size: 0.8rem; background: var(--surface-weak); padding: 0.25rem 0.5rem; border-radius: 4px;">{activity['status']}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
@@ -668,7 +703,7 @@ def render_swap_ai():
         if from_chain_name:
             chain_info = CHAINS[from_chain_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-medium); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.5rem;">{chain_info['icon']}</span>
                 <span style="color: {chain_info['color']}; font-weight: 600;">{from_chain_name}</span>
             </div>
@@ -679,7 +714,7 @@ def render_swap_ai():
         if from_token_name:
             token_info = TOKENS[from_token_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-medium); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.2rem;">{token_info['icon']}</span>
                 <span style="font-weight: 600;">{from_token_name}</span>
             </div>
@@ -691,7 +726,7 @@ def render_swap_ai():
         if to_chain_name:
             chain_info = CHAINS[to_chain_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-medium); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.5rem;">{chain_info['icon']}</span>
                 <span style="color: {chain_info['color']}; font-weight: 600;">{to_chain_name}</span>
             </div>
@@ -702,7 +737,7 @@ def render_swap_ai():
         if to_token_name:
             token_info = TOKENS[to_token_name]
             st.markdown(f"""
-            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; margin-top: 0.5rem;">
+            <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.75rem; background: var(--surface-medium); border-radius: 8px; margin-top: 0.5rem;">
                 <span style="font-size: 1.2rem;">{token_info['icon']}</span>
                 <span style="font-weight: 600;">{to_token_name}</span>
             </div>
@@ -898,6 +933,20 @@ def main():
         st.markdown(get_logo_as_html(), unsafe_allow_html=True)
         st.markdown("### Navigation")
         
+        # Theme toggle
+        if 'theme' not in st.session_state:
+            st.session_state.theme = 'dark'
+        theme_choice = st.toggle("Light mode", value=(st.session_state.theme == 'light'))
+        st.session_state.theme = 'light' if theme_choice else 'dark'
+        components.html(f"""
+            <script>
+                try {{
+                    var body = parent.document.body;
+                    body.setAttribute('data-theme', '{st.session_state.theme}');
+                }} catch (e) {{}}
+            </script>
+        """, height=0)
+        
         pages = {
             "Dashboard": {"icon": "📊", "desc": "Analytics & Overview"},
             "Swap AI": {"icon": "🤖", "desc": "AI-Powered Swaps"},
@@ -917,7 +966,7 @@ def main():
             
             if is_active:
                 st.markdown(f"""
-                <div style="padding: 0.5rem; margin: 0.25rem 0; background: rgba(102, 126, 234, 0.1); border-radius: 8px; border-left: 3px solid var(--text-accent);">
+                <div style="padding: 0.5rem; margin: 0.25rem 0; background: var(--surface-weak); border-radius: 8px; border-left: 3px solid var(--text-accent);">
                     <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">{info['desc']}</p>
                 </div>
                 """, unsafe_allow_html=True)
@@ -928,7 +977,7 @@ def main():
         # Quick stats in sidebar
         st.markdown("### Quick Stats")
         st.markdown("""
-        <div style="background: rgba(255, 255, 255, 0.05); padding: 1rem; border-radius: 12px; margin: 1rem 0;">
+        <div style="background: var(--surface-medium); padding: 1rem; border-radius: 12px; margin: 1rem 0;">
             <div style="display: flex; justify-content: space-between; margin: 0.5rem 0;">
                 <span style="color: var(--text-secondary);">Active Swaps:</span>
                 <span style="color: var(--text-accent); font-weight: 600;">1,247</span>
